@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // experimental: {
-  //   dynamicIO: true,
-  // },
+  experimental: {
+    cacheComponents: true,
+  },
   /* config options here */
 };
 

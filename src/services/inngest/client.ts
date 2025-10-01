@@ -1,4 +1,8 @@
-import { DeletedObjectJSON, UserJSON } from "@clerk/nextjs/server";
+import {
+  DeletedObjectJSON,
+  OrganizationJSON,
+  UserJSON,
+} from "@clerk/nextjs/server";
 import { EventSchemas, Inngest } from "inngest";
 
 type ClerkWebbhookData<T> = {
@@ -13,6 +17,9 @@ type EventType = {
   "clerk/user.created": ClerkWebbhookData<UserJSON>;
   "clerk/user.updated": ClerkWebbhookData<UserJSON>;
   "clerk/user.deleted": ClerkWebbhookData<DeletedObjectJSON>;
+  "clerk/organization.created": ClerkWebbhookData<OrganizationJSON>;
+  "clerk/organization.updated": ClerkWebbhookData<OrganizationJSON>;
+  "clerk/organization.deleted": ClerkWebbhookData<DeletedObjectJSON>;
 };
 
 // Create a client to send and receive events

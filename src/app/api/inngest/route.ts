@@ -1,8 +1,11 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/services/inngest/client";
 import {
+  clerkCreateOrganization,
   clerkCreateUser,
+  clerkDeleteOrganization,
   clerkDeleteUser,
+  clerkUpdateOrganization,
   clerkUpdateUser,
 } from "@/services/inngest/functions/clerk";
 
@@ -13,6 +16,9 @@ export const { GET, POST, PUT } = serve({
     clerkCreateUser,
     clerkDeleteUser,
     clerkUpdateUser,
+    clerkCreateOrganization,
+    clerkDeleteOrganization,
+    clerkUpdateOrganization,
     /* your functions will be passed here later! */
   ],
 });
