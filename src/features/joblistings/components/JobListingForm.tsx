@@ -1,4 +1,8 @@
 "use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { jobListingSchema } from "../actions/schemas";
 import {
   Form,
   FormControl,
@@ -8,6 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -18,15 +23,12 @@ import {
 } from "@/components/ui/select";
 import {
   experienceLevels,
+  JobListingTable,
   jobListingTypes,
+  locationRequirementEnum,
   locationRequirements,
   wageIntervals,
 } from "@/drizzle/schema";
-import { jobListingSchema } from "@/features/joblistings/actions/schemas";
-import { zodResolver } from "@hookform/resolvers/zod";
-
-import { useForm } from "react-hook-form";
-import z from "zod";
 import {
   formatExperienceLevel,
   formatJobType,
@@ -37,33 +39,54 @@ import { StateSelectItems } from "./StateSelectItem";
 import { MarkdownEditor } from "@/components/markdown/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/LoadingSwap";
-import createJobListing from "../actions/actions";
+import { Loader2Icon } from "lucide-react";
+
+import { createJobListing, updateJobListing } from "../actions/actions";
 import { toast } from "sonner";
 
-const NON_SELECT_VALUE = "none";
-const JobListingForm = () => {
+const NONE_SELECT_VALUE = "none";
+
+export function JobListingForm({
+  jobListing,
+}: {
+  jobListing: Pick<
+    typeof JobListingTable.$inferSelect,
+    | "title"
+    | "description"
+    | "experienceLevel"
+    | "id"
+    | "stateAbbreviation"
+    | "type"
+    | "wage"
+    | "wageInterval"
+    | "city"
+    | "locationRequirement"
+  >;
+}) {
   const form = useForm({
     resolver: zodResolver(jobListingSchema),
-    defaultValues: {
+    defaultValues: jobListing ?? {
       title: "",
       description: "",
-      experienceLevel: "junior",
-      locationRequirement: "in-office",
-      type: "full-time",
+      stateAbbreviation: null,
+      city: null,
       wage: null,
       wageInterval: "yearly",
-      city: null,
-      stateAbbreviation: null,
+      experienceLevel: "junior",
+      type: "full-time",
+      locationRequirement: "in-office",
     },
   });
 
   async function onSubmit(data: z.infer<typeof jobListingSchema>) {
-    const response = await createJobListing(data);
-    if (response.error) {
-      toast.error(response.message);
-    }
+    const action = jobListing
+      ? updateJobListing.bind(null, jobListing.id)
+      : createJobListing;
+    const res = await action(data);
 
-    // console.log("data:", data);
+    if (res.error) {
+      toast.error(res.message);
+    }
   }
 
   return (
@@ -72,186 +95,147 @@ const JobListingForm = () => {
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-6 @container"
       >
-        <div className="grid grid-cols-1 @md:grid-cols-2 gap-y-6 gap-x-4 items-start">
-          {/* job title */}
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-x-4 gap-y-6 items-start">
           <FormField
             name="title"
             control={form.control}
-            render={({ field }) => {
-              return (
-                <FormItem>
-                  <FormLabel>job title</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              );
-            }}
-          ></FormField>
-
-          {/* wage */}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Job Title</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             name="wage"
             control={form.control}
-            render={({ field }) => {
-              return (
-                <FormItem>
-                  <FormLabel>wage</FormLabel>
-                  <div className="flex">
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        className="rounded-r-none"
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.onChange(
-                            isNaN(e.target.valueAsNumber)
-                              ? null
-                              : e.target.valueAsNumber
-                          )
-                        }
-                      />
-                    </FormControl>
-
-                    {/* wageInterval */}
-
-                    <FormField
-                      name="wageInterval"
-                      control={form.control}
-                      render={({ field }) => {
-                        return (
-                          <FormItem>
-                            <Select
-                              value={field.value ?? ""}
-                              onValueChange={(val) =>
-                                field.onChange(val ?? null)
-                              }
-                            >
-                              <FormControl>
-                                <SelectTrigger className="rounded-l-none">
-                                  /<SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-
-                              <SelectContent>
-                                {wageIntervals.map((interval) => (
-                                  <SelectItem key={interval} value={interval}>
-                                    {formatWageInterval(interval)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Wage</FormLabel>
+                <div className="flex">
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="number"
+                      value={field.value ?? ""}
+                      className="rounded-r-none"
+                      onChange={(e) =>
+                        field.onChange(
+                          isNaN(e.target.valueAsNumber)
+                            ? null
+                            : e.target.valueAsNumber
+                        )
+                      }
                     />
-                  </div>
-                  <FormDescription>Optional</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              );
-            }}
+                  </FormControl>
+                  <FormField
+                    name="wageInterval"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select
+                          value={field.value ?? ""}
+                          onValueChange={(val) => field.onChange(val ?? null)}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="rounded-l-none">
+                              / <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {wageIntervals.map((interval) => (
+                              <SelectItem key={interval} value={interval}>
+                                {formatWageInterval(interval)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormDescription>Optional</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-
-        {/* second rwo  */}
-        <div className="grid grid-cols-1 @md:grid-cols-2 gap-y-6 gap-x-4 items-start">
-          <div className="grid grid-cols-1 @xs:grid-cols-2 gap-y-6 gap-x-2 items-start">
-            {/* city */}
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-x-4 gap-y-6 items-start">
+          <div className="grid grid-cols-1 @xs:grid-cols-2 gap-x-2 gap-y-6 items-start">
             <FormField
               name="city"
               control={form.control}
-              render={({ field }) => {
-                return (
-                  <FormItem>
-                    <FormLabel>city</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
-            ></FormField>
-
-            {/* stateabbreviation */}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               name="stateAbbreviation"
               control={form.control}
-              render={({ field }) => {
-                return (
-                  <FormItem>
-                    <Select
-                      value={field.value ?? ""}
-                      onValueChange={(val) =>
-                        field.onChange(val === NON_SELECT_VALUE ? null : val)
-                      }
-                    >
-                      <FormLabel>state</FormLabel>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-
-                      <SelectContent>
-                        {field.value !== null && (
-                          <SelectItem
-                            className="text-muted-foreground"
-                            value={NON_SELECT_VALUE}
-                          >
-                            clear
-                          </SelectItem>
-                        )}
-                        <StateSelectItems></StateSelectItems>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
-            />
-          </div>
-
-          {/* location requirement */}
-
-          <FormField
-            name="locationRequirement"
-            control={form.control}
-            render={({ field }) => {
-              return (
+              render={({ field }) => (
                 <FormItem>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormLabel>location requirements</FormLabel>
+                  <FormLabel>State</FormLabel>
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(val) =>
+                      field.onChange(val === NONE_SELECT_VALUE ? null : val)
+                    }
+                  >
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
-
                     <SelectContent>
-                      {locationRequirements.map((locationRequirement) => (
+                      {field.value != null && (
                         <SelectItem
-                          key={locationRequirement}
-                          value={locationRequirement}
+                          value={NONE_SELECT_VALUE}
+                          className="text-muted-foreground"
                         >
-                          {formatLocationRequirement(locationRequirement)}
+                          Clear
                         </SelectItem>
-                      ))}
+                      )}
+                      <StateSelectItems />
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
-              );
-            }}
+              )}
+            />
+          </div>
+          <FormField
+            name="locationRequirement"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location Requirement</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {locationRequirements.map((lr) => (
+                      <SelectItem key={lr} value={lr}>
+                        {formatLocationRequirement(lr)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
           />
         </div>
-
-        {/* job type */}
-
         <div className="grid grid-cols-1 @md:grid-cols-2 gap-x-4 gap-y-6 items-start">
           <FormField
             name="type"
@@ -277,8 +261,6 @@ const JobListingForm = () => {
               </FormItem>
             )}
           />
-
-          {/* experience level */}
           <FormField
             name="experienceLevel"
             control={form.control}
@@ -304,7 +286,6 @@ const JobListingForm = () => {
             )}
           />
         </div>
-
         <FormField
           name="description"
           control={form.control}
@@ -330,6 +311,4 @@ const JobListingForm = () => {
       </form>
     </Form>
   );
-};
-
-export default JobListingForm;
+}
