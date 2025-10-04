@@ -1,8 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/drizzle/db";
 import { JobListingTable } from "@/drizzle/schema";
-import { JobListingForm } from "@/features/joblistings/components/JobListingForm";
-import { getJobListingIdTag } from "@/features/joblistings/db/cache/jobListings";
+import { JobListingForm } from "@/features/jobListing/components/JobListingForm";
+import { getJobListingIdTag } from "@/features/jobListing/db/cache/jobListings";
 
 import { getCurrentOrganization } from "@/services/clerk/lib/getCurrentAuth";
 import { and, eq } from "drizzle-orm";

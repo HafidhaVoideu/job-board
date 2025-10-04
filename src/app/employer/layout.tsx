@@ -12,6 +12,14 @@ import { redirect } from "next/navigation";
 
 import SideNavMenuBarGroup from "@/components/sidebar/SideNavMenuBarGroup";
 import { ReactNode, Suspense } from "react";
+import { getJobListingOrganizationTag } from "@/features/jobListing/db/cache/jobListings";
+import { JobListingApplicationTable, JobListingTable } from "@/drizzle/schema";
+import { desc, eq } from "drizzle-orm";
+import { cacheTag } from "next/dist/server/use-cache/cache-tag";
+import { count } from "console";
+import { hasOrgUserPermission } from "@/services/clerk/lib/orgUsersPermissions";
+import { AsyncIf } from "@/components/AsyncIf";
+import { db } from "@/drizzle/db";
 
 export default function EmployerLayout({ children }: { children: ReactNode }) {
   return (
@@ -32,11 +40,15 @@ async function LayoutSuspense({ children }: { children: ReactNode }) {
           <SidebarGroup>
             <SidebarGroupLabel>Job Listings</SidebarGroupLabel>
 
-            <SidebarGroupAction title="Add Job Listing" asChild>
-              <Link href="/employer/job-listings/new">
-                <PlusIcon /> <span className="sr-only">Add Job Listing</span>
-              </Link>
-            </SidebarGroupAction>
+            <AsyncIf
+              condition={() => hasOrgUserPermission("org:job_listings:create")}
+            >
+              <SidebarGroupAction title="Add Job Listing" asChild>
+                <Link href="/employer/job-listings/new">
+                  <PlusIcon /> <span className="sr-only">Add Job Listing</span>
+                </Link>
+              </SidebarGroupAction>
+            </AsyncIf>
             <SidebarGroupContent className="group-data-[state=collapsed]:hidden">
               {/* <Suspense>
                 <JobListingMen orgId={orgId} />
@@ -56,4 +68,31 @@ async function LayoutSuspense({ children }: { children: ReactNode }) {
       {children}
     </AppSidebar>
   );
+}
+
+async function getJobListings(orgId: string) {
+  "use cache";
+  cacheTag(getJobListingOrganizationTag(orgId));
+
+  const data = await db
+    .select({
+      id: JobListingTable.id,
+      title: JobListingTable.title,
+      status: JobListingTable.status,
+      applicationCount: count(JobListingApplicationTable.userId),
+    })
+    .from(JobListingTable)
+    .where(eq(JobListingTable.organizationId, orgId))
+    .leftJoin(
+      JobListingApplicationTable,
+      eq(JobListingTable.id, JobListingApplicationTable.jobListingId)
+    )
+    .groupBy(JobListingApplicationTable.jobListingId, JobListingTable.id)
+    .orderBy(desc(JobListingTable.createdAt));
+
+  data.forEach((jobListing) => {
+    cacheTag(getJobListingApplicationJobListingTag(jobListing.id));
+  });
+
+  return data;
 }
